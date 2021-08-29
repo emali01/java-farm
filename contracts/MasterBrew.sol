@@ -144,7 +144,7 @@ contract MasterBrew is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accJavaPerShare: 0
+            accJavaPerShare: 0,
             depositFeeBP: _depositFeeBP
         }));
         updateStakingPool();
