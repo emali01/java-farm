@@ -4,8 +4,8 @@ import "@javaswap/java-swap-lib/contracts/token/BEP20/BEP20.sol";
 
 import "./JavaToken.sol";
 
-// SyrupBar with Governance.
-contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
+// Espresso with Governance.
+contract Espresso is BEP20('Espresso Token', 'ESPRESSO') {
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterBrew).
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);

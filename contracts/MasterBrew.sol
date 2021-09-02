@@ -6,7 +6,7 @@ import '@javaswap/java-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
 import '@javaswap/java-swap-lib/contracts/access/Ownable.sol';
 
 import "./JavaToken.sol";
-import "./SyrupBar.sol";
+import "./Espresso.sol";
 import "./libs/IReferral.sol";
 
 // import "@nomiclabs/buidler/console.sol";
@@ -63,8 +63,8 @@ contract MasterBrew is Ownable {
 
     // The JAVA TOKEN!
     JavaToken public java;
-    // The SYRUP TOKEN!
-    SyrupBar public syrup;
+    // The ESPRESSO TOKEN!
+    Espresso public espresso;
     // Dev address.
     address public devaddr;
     // JAVA tokens created per block.
@@ -97,14 +97,14 @@ contract MasterBrew is Ownable {
 
     constructor(
         JavaToken _java,
-        SyrupBar _syrup,
+        Espresso _espresso,
         address _devaddr,
         address _feeAddress,
         uint256 _javaPerBlock,
         uint256 _startBlock
     ) public {
         java = _java;
-        syrup = _syrup;
+        espresso = _espresso;
         feeAddress = _feeAddress;
         devaddr = _devaddr;
         javaPerBlock = _javaPerBlock;
@@ -237,7 +237,7 @@ contract MasterBrew is Ownable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 javaReward = multiplier.mul(javaPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
         java.mint(devaddr, javaReward.div(10));
-        java.mint(address(syrup), javaReward);
+        java.mint(address(espresso), javaReward);
         pool.accJavaPerShare = pool.accJavaPerShare.add(javaReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
@@ -303,6 +303,11 @@ contract MasterBrew is Ownable {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[0][msg.sender];
         updatePool(0);
+
+        if (_amount > 0 && address(referral) != address(0) && _referrer != address(0) && _referrer != msg.sender) {
+            referral.recordReferral(msg.sender, _referrer);
+        }
+
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accJavaPerShare).div(1e12).sub(user.rewardDebt);
             if(pending > 0) {
@@ -322,7 +327,7 @@ contract MasterBrew is Ownable {
         }
         user.rewardDebt = user.amount.mul(pool.accJavaPerShare).div(1e12);
 
-        syrup.mint(msg.sender, _amount);
+        espresso.mint(msg.sender, _amount);
         emit Deposit(msg.sender, 0, _amount);
     }
 
@@ -343,7 +348,7 @@ contract MasterBrew is Ownable {
         }
         user.rewardDebt = user.amount.mul(pool.accJavaPerShare).div(1e12);
 
-        syrup.burn(msg.sender, _amount);
+        espresso.burn(msg.sender, _amount);
         emit Withdraw(msg.sender, 0, _amount);
     }
 
@@ -359,7 +364,7 @@ contract MasterBrew is Ownable {
 
     // Safe java transfer function, just in case if rounding error causes pool to not have enough JAVAs.
     function safeJavaTransfer(address _to, uint256 _amount) internal {
-        syrup.safeJavaTransfer(_to, _amount);
+        espresso.safeJavaTransfer(_to, _amount);
     }
 
     // Update dev address by the previous dev.

@@ -7,7 +7,7 @@ module.exports = {
     "libs",
     "libs",
     "libs",
-    "SyrupBar.sol",
+    "Espresso.sol",
     "JavaToken.sol",
     "Timelock.sol"
   ],
