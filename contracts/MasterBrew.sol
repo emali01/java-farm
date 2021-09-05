@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import '@javaswap/java-swap-lib/contracts/math/SafeMath.sol';
@@ -267,9 +269,7 @@ contract MasterBrew is Ownable {
             if(pool.depositFeeBP > 0){
                 uint256 depositFee = _amount.mul(pool.depositFeeBP).div(10000);
                 pool.lpToken.safeTransfer(feeAddress, depositFee);
-                user.amount = user.amount.add(_amount).sub(depositFee);
-            }else{
-                user.amount = user.amount.add(_amount);
+                _amount = _amount.sub(depositFee);
             }
         }
         user.rewardDebt = user.amount.mul(pool.accJavaPerShare).div(1e12);
@@ -320,10 +320,9 @@ contract MasterBrew is Ownable {
             if(pool.depositFeeBP > 0){
                 uint256 depositFee = _amount.mul(pool.depositFeeBP).div(10000);
                 pool.lpToken.safeTransfer(feeAddress, depositFee);
-                user.amount = user.amount.add(_amount).sub(depositFee);
-            }else{
-                user.amount = user.amount.add(_amount);
+                _amount = _amount.sub(depositFee);
             }
+            user.amount = user.amount.add(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accJavaPerShare).div(1e12);
 
