@@ -271,6 +271,8 @@ contract MasterBrew is Ownable {
                 pool.lpToken.safeTransfer(feeAddress, depositFee);
                 _amount = _amount.sub(depositFee);
             }
+            
+            user.amount = user.amount.add(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accJavaPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
