@@ -8,23 +8,9 @@ import '@javaswap/java-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
 import '@javaswap/java-swap-lib/contracts/access/Ownable.sol';
 
 import "./JavaToken.sol";
-import "./Espresso.sol";
 import "./libs/IReferral.sol";
 
 // import "@nomiclabs/buidler/console.sol";
-
-interface IMigratorBrew {
-    // Perform LP token migration from legacy JavaSwap to JavaSwap.
-    // Take the current LP token address and return the new LP token address.
-    // Migrator should have full access to the caller's LP token.
-    // Return the new LP token address.
-    //
-    // XXX Migrator must have allowance access to JavaSwap LP tokens.
-    // JavaSwap must mint EXACTLY the same amount of JavaSwap LP tokens or
-    // else something bad will happen. Traditional JavaSwap does not
-    // do that so be careful!
-    function migrate(IBEP20 token) external returns (IBEP20);
-}
 
 // MasterBrew is the master of Java. He can make Java and he is a fair guy.
 //
@@ -65,16 +51,12 @@ contract MasterBrew is Ownable {
 
     // The JAVA TOKEN!
     JavaToken public java;
-    // The ESPRESSO TOKEN!
-    Espresso public espresso;
     // Dev address.
     address public devaddr;
     // JAVA tokens created per block.
     uint256 public javaPerBlock;
     // Bonus muliplier for early java makers.
     uint256 public BONUS_MULTIPLIER = 1;
-    // The migrator contract. It has a lot of power. Can only be set through governance (owner).
-    IMigratorBrew public migrator;
     // Deposit Fee address
     address public feeAddress;
 
@@ -99,14 +81,12 @@ contract MasterBrew is Ownable {
 
     constructor(
         JavaToken _java,
-        Espresso _espresso,
         address _devaddr,
         address _feeAddress,
         uint256 _javaPerBlock,
         uint256 _startBlock
     ) public {
         java = _java;
-        espresso = _espresso;
         feeAddress = _feeAddress;
         devaddr = _devaddr;
         javaPerBlock = _javaPerBlock;
@@ -136,7 +116,7 @@ contract MasterBrew is Ownable {
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IBEP20 _lpToken, uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
+        require(_depositFeeBP <= 1000, "add: invalid deposit fee basis points");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -154,7 +134,7 @@ contract MasterBrew is Ownable {
 
     // Update the given pool's JAVA allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= 10000, "set: invalid deposit fee basis points");
+        require(_depositFeeBP <= 1000, "set: invalid deposit fee basis points");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -178,23 +158,6 @@ contract MasterBrew is Ownable {
             totalAllocPoint = totalAllocPoint.sub(poolInfo[0].allocPoint).add(points);
             poolInfo[0].allocPoint = points;
         }
-    }
-
-    // Set the migrator contract. Can only be called by the owner.
-    function setMigrator(IMigratorBrew _migrator) public onlyOwner {
-        migrator = _migrator;
-    }
-
-    // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-    function migrate(uint256 _pid) public {
-        require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IBEP20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IBEP20 newLpToken = migrator.migrate(lpToken);
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -239,15 +202,13 @@ contract MasterBrew is Ownable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 javaReward = multiplier.mul(javaPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
         java.mint(devaddr, javaReward.div(10));
-        java.mint(address(espresso), javaReward);
+        java.mint(address(this), javaReward);
         pool.accJavaPerShare = pool.accJavaPerShare.add(javaReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
     // Deposit LP tokens to MasterBrew for JAVA allocation.
     function deposit(uint256 _pid, uint256 _amount, address _referrer) public {
-
-        require (_pid != 0, 'deposit JAVA by staking');
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -265,7 +226,14 @@ contract MasterBrew is Ownable {
             }
         }
         if (_amount > 0) {
+            
+            // Thanks for RugDoc advice
+            uint256 _before = pool.lpToken.balanceOf(address(this));
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+            uint256 _after = pool.lpToken.balanceOf(address(this));
+            _amount = _after.sub(_before);
+            // Thanks for RugDoc advice
+            
             if(pool.depositFeeBP > 0){
                 uint256 depositFee = _amount.mul(pool.depositFeeBP).div(10000);
                 pool.lpToken.safeTransfer(feeAddress, depositFee);
@@ -281,7 +249,6 @@ contract MasterBrew is Ownable {
     // Withdraw LP tokens from MasterBrew.
     function withdraw(uint256 _pid, uint256 _amount) public {
 
-        require (_pid != 0, 'withdraw JAVA by unstaking');
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
@@ -300,59 +267,6 @@ contract MasterBrew is Ownable {
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
-    // Stake JAVA tokens to MasterBrew
-    function enterStaking(uint256 _amount, address _referrer) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        updatePool(0);
-
-        if (_amount > 0 && address(referral) != address(0) && _referrer != address(0) && _referrer != msg.sender) {
-            referral.recordReferral(msg.sender, _referrer);
-        }
-
-        if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accJavaPerShare).div(1e12).sub(user.rewardDebt);
-            if(pending > 0) {
-                safeJavaTransfer(msg.sender, pending);
-                payReferralCommission(msg.sender, pending);
-            }
-        }
-        if(_amount > 0) {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            if(pool.depositFeeBP > 0){
-                uint256 depositFee = _amount.mul(pool.depositFeeBP).div(10000);
-                pool.lpToken.safeTransfer(feeAddress, depositFee);
-                _amount = _amount.sub(depositFee);
-            }
-            user.amount = user.amount.add(_amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accJavaPerShare).div(1e12);
-
-        espresso.mint(msg.sender, _amount);
-        emit Deposit(msg.sender, 0, _amount);
-    }
-
-    // Withdraw JAVA tokens from STAKING.
-    function leaveStaking(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
-        updatePool(0);
-        uint256 pending = user.amount.mul(pool.accJavaPerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0) {
-            safeJavaTransfer(msg.sender, pending);
-            payReferralCommission(msg.sender, pending);
-        }
-        if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accJavaPerShare).div(1e12);
-
-        espresso.burn(msg.sender, _amount);
-        emit Withdraw(msg.sender, 0, _amount);
-    }
-
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
@@ -365,12 +279,20 @@ contract MasterBrew is Ownable {
 
     // Safe java transfer function, just in case if rounding error causes pool to not have enough JAVAs.
     function safeJavaTransfer(address _to, uint256 _amount) internal {
-        espresso.safeJavaTransfer(_to, _amount);
+        uint256 javaBal = java.balanceOf(address(this));
+        bool transferSuccess = false;
+        if (_amount > javaBal) {
+            transferSuccess = java.transfer(_to, javaBal);
+        } else {
+            transferSuccess = java.transfer(_to, _amount);
+        }
+        require(transferSuccess, "safeJavaTransfer: transfer failed");
     }
 
     // Update dev address by the previous dev.
     function dev(address _devaddr) public {
         require(msg.sender == devaddr, "dev: wut?");
+        require(_devaddr != address(0), "Address cant be 0");
         devaddr = _devaddr;
     }
 
@@ -383,6 +305,11 @@ contract MasterBrew is Ownable {
     // Allows to update the referral contract. It must be approved and executed by Governance
     function setReferral(IReferral _referral) public onlyOwner {
         referral = _referral;
+    }
+    
+    // Allows to update the referral contract. It must be approved and executed by Governance
+    function setFeeAddress(address _feeAddress) public onlyOwner {
+        feeAddress = _feeAddress;
     }
 
     // Updates must be approved and executed by Governance

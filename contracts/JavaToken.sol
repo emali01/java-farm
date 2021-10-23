@@ -1,9 +1,31 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import "@javaswap/java-swap-lib/contracts/token/BEP20/BEP20.sol";
 
 // JavaToken with Governance.
-contract JavaToken is BEP20('JavaSwap Token', 'Java') {
+contract JavaToken is BEP20('JavaSwap Token', 'JAVA') {
+    
+    // Java v1 for migration verification from RugDog! 
+    BEP20 public javaV1 = BEP20(0xAFC9AA5ebd7197662D869F75890F18AafEEFb1f5); 
+    
+    //Burn address for tokens v1
+    address public burnAddress = 0x000000000000000000000000000000000000dEaD;
+    
+    // Java swap 1:1 for the JAVA v2
+    function swapV2(uint256 _amount) public{
+        require(_amount>0, "Amount invalid");
+        require(
+            javaV1.allowance(msg.sender, address(this)) >= _amount,
+            "Token allowance too low"
+        );
+        
+        javaV1.transferFrom(msg.sender, burnAddress, _amount);
+        
+        _mint(msg.sender, _amount);
+    }
+    
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterBrew).
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);
@@ -16,7 +38,7 @@ contract JavaToken is BEP20('JavaSwap Token', 'Java') {
     // Which is copied and modified from COMPOUND:
     // https://github.com/compound-finance/compound-protocol/blob/master/contracts/Governance/Comp.sol
 
-    /// @notice A record of each accounts delegate
+    /// @dev A record of each accounts delegate
     mapping (address => address) internal _delegates;
 
     /// @notice A checkpoint for marking number of votes from a given block

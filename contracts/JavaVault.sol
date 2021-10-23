@@ -24,7 +24,6 @@ contract JavaVault is Ownable, Pausable {
     }
 
     IERC20 public immutable token; // Java token
-    IERC20 public immutable receiptToken; // Espresso token
 
     IMasterBrew public immutable masterbrew;
 
@@ -57,20 +56,17 @@ contract JavaVault is Ownable, Pausable {
     /**
      * @notice Constructor
      * @param _token: Java token contract
-     * @param _receiptToken: Espresso token contract
      * @param _masterbrew: MasterBrew contract
      * @param _admin: address of the admin
      * @param _treasury: address of the treasury (collects fees)
      */
     constructor(
         IERC20 _token,
-        IERC20 _receiptToken,
         IMasterBrew _masterbrew,
         address _admin,
         address _treasury
     ) public {
         token = _token;
-        receiptToken = _receiptToken;
         masterbrew = _masterbrew;
         admin = _admin;
         treasury = _treasury;
@@ -143,7 +139,7 @@ contract JavaVault is Ownable, Pausable {
      * @dev Only possible when contract not paused.
      */
     function harvest() external notContract whenNotPaused {
-        IMasterBrew(masterbrew).leaveStaking(0);
+        IMasterBrew(masterbrew).withdraw(0, 0);
 
         uint256 bal = available();
         uint256 currentPerformanceFee = bal.mul(performanceFee).div(10000);
@@ -229,7 +225,6 @@ contract JavaVault is Ownable, Pausable {
      */
     function inCaseTokensGetStuck(address _token) external onlyAdmin {
         require(_token != address(token), "Token cannot be same as deposit token");
-        require(_token != address(receiptToken), "Token cannot be same as receipt token");
 
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
@@ -299,7 +294,7 @@ contract JavaVault is Ownable, Pausable {
         uint256 bal = available();
         if (bal < currentAmount) {
             uint256 balWithdraw = currentAmount.sub(bal);
-            IMasterBrew(masterbrew).leaveStaking(balWithdraw);
+            IMasterBrew(masterbrew).withdraw(0, balWithdraw);
             uint256 balAfter = available();
             uint256 diff = balAfter.sub(bal);
             if (diff < balWithdraw) {
@@ -361,7 +356,7 @@ contract JavaVault is Ownable, Pausable {
     function _earn() internal {
         uint256 bal = available();
         if (bal > 0) {
-            IMasterBrew(masterbrew).enterStaking(bal, address(0));
+            IMasterBrew(masterbrew).deposit(0, bal, address(0));
         }
     }
 
