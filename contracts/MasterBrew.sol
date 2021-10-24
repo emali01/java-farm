@@ -106,6 +106,9 @@ contract MasterBrew is Ownable {
     }
 
     function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
+        // Validation recomended 
+        require (multiplierNumber <= BONUS_MULTIPLIER * 50 && multiplierNumber >= BONUS_MULTIPLIER / 50, "Invalid value for update multiplier");
+        
         BONUS_MULTIPLIER = multiplierNumber;
     }
 
@@ -296,8 +299,11 @@ contract MasterBrew is Ownable {
         devaddr = _devaddr;
     }
 
-    //Java has to add hidden dummy pools inorder to alter the emission, here we make it simple and transparent to all.
+    //Pancake has to add hidden dummy pools inorder to alter the emission, here we make it simple and transparent to all.
     function updateEmissionRate(uint256 _javaPerBlock) public onlyOwner {
+        // Validation recomended 
+        require (_javaPerBlock <= javaPerBlock * 50 && _javaPerBlock >= javaPerBlock / 50, "Invalid value for update javaPerBlock");
+        
         massUpdatePools();
         javaPerBlock = _javaPerBlock;
     }
