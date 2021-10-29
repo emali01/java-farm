@@ -321,6 +321,7 @@ contract MasterBrew is Ownable {
 
     // Updates must be approved and executed by Governance
     function setReferralCommissionRate(uint16 _referralCommissionRate) public onlyOwner {
+        require(_referralCommissionRate <= 5, "Invalid value for Referral Commision Rate");
         referralCommissionRate = _referralCommissionRate;
     }
 
