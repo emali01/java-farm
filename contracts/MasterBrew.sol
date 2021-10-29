@@ -107,7 +107,7 @@ contract MasterBrew is Ownable {
 
     function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
         // Validation recomended 
-        require (multiplierNumber <= BONUS_MULTIPLIER * 50 && multiplierNumber >= BONUS_MULTIPLIER / 50, "Invalid value for update multiplier");
+        require (multiplierNumber <= 5, "Invalid value for update multiplier");
         
         BONUS_MULTIPLIER = multiplierNumber;
     }
@@ -302,7 +302,7 @@ contract MasterBrew is Ownable {
     //Pancake has to add hidden dummy pools inorder to alter the emission, here we make it simple and transparent to all.
     function updateEmissionRate(uint256 _javaPerBlock) public onlyOwner {
         // Validation recomended 
-        require (_javaPerBlock <= javaPerBlock * 50 && _javaPerBlock >= javaPerBlock / 50, "Invalid value for update javaPerBlock");
+        require (_javaPerBlock <= 50, "Invalid value for update javaPerBlock");
         
         massUpdatePools();
         javaPerBlock = _javaPerBlock;
@@ -313,8 +313,9 @@ contract MasterBrew is Ownable {
         referral = _referral;
     }
     
-    // Allows to update the referral contract. It must be approved and executed by Governance
+    // Allows to update the fee address. It must be approved and executed by Governance
     function setFeeAddress(address _feeAddress) public onlyOwner {
+        require(_feeAddress != address(0), "Address cant be 0");
         feeAddress = _feeAddress;
     }
 
