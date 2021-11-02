@@ -68,6 +68,7 @@ contract MasterBrew is Ownable {
     uint256 public totalAllocPoint = 0;
     // The block number when JAVA mining starts.
     uint256 public startBlock;
+    uint256 private counter = 1;
 
     // Referral contract address.
     IReferral public referral;
@@ -78,6 +79,13 @@ contract MasterBrew is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event ReferralCommissionPaid(address indexed user, address indexed referrer, uint256 commissionAmount);
+    
+    modifier entrancyGuard() {
+        counter = counter.add(1); // counter adds 1 to the existing 1 so becomes 2
+        uint256 guard = counter; // assigns 2 to the "guard" variable
+        _;
+        require(guard == counter, "That is not allowed"); // 2 == 2? 
+    }
 
     constructor(
         JavaToken _java,
@@ -211,7 +219,7 @@ contract MasterBrew is Ownable {
     }
 
     // Deposit LP tokens to MasterBrew for JAVA allocation.
-    function deposit(uint256 _pid, uint256 _amount, address _referrer) public {
+    function deposit(uint256 _pid, uint256 _amount, address _referrer) public entrancyGuard() {
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -250,7 +258,7 @@ contract MasterBrew is Ownable {
     }
 
     // Withdraw LP tokens from MasterBrew.
-    function withdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(uint256 _pid, uint256 _amount) public entrancyGuard() {
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -271,7 +279,7 @@ contract MasterBrew is Ownable {
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw(uint256 _pid) public {
+    function emergencyWithdraw(uint256 _pid) public entrancyGuard() {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
