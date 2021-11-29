@@ -310,7 +310,7 @@ contract MasterBrew is Ownable {
     //Pancake has to add hidden dummy pools inorder to alter the emission, here we make it simple and transparent to all.
     function updateEmissionRate(uint256 _javaPerBlock) public onlyOwner {
         // Validation recomended 
-        require (_javaPerBlock <= 50, "Invalid value for update javaPerBlock");
+        require (_javaPerBlock <= 50 ether, "Invalid value for update javaPerBlock");
         
         massUpdatePools();
         javaPerBlock = _javaPerBlock;

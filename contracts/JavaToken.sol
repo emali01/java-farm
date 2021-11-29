@@ -9,12 +9,14 @@ contract JavaToken is BEP20('JavaSwap Token', 'JAVA') {
     
     // Java v1 for migration verification from RugDog! 
     BEP20 public javaV1 = BEP20(0xAFC9AA5ebd7197662D869F75890F18AafEEFb1f5); 
+    // Java v2 for migration about bug on V2! 
+    BEP20 public javaV2 = BEP20(0xeB5B7b7f03200bd25aBf9bD68A57F945Ff5b1428); 
     
-    //Burn address for tokens v1
+    //Burn address for tokens
     address public burnAddress = 0x000000000000000000000000000000000000dEaD;
     
     // Java swap 1:1 for the JAVA v2
-    function swapV2(uint256 _amount) public{
+    function swapFromV1(uint256 _amount) public{
         require(_amount>0, "Amount invalid");
         require(
             javaV1.allowance(msg.sender, address(this)) >= _amount,
@@ -22,6 +24,18 @@ contract JavaToken is BEP20('JavaSwap Token', 'JAVA') {
         );
         
         javaV1.transferFrom(msg.sender, burnAddress, _amount);
+        
+        _mint(msg.sender, _amount);
+    }
+
+    function swapFromV2(uint256 _amount) public{
+        require(_amount>0, "Amount invalid");
+        require(
+            javaV2.allowance(msg.sender, address(this)) >= _amount,
+            "Token allowance too low"
+        );
+        
+        javaV2.transferFrom(msg.sender, burnAddress, _amount);
         
         _mint(msg.sender, _amount);
     }
